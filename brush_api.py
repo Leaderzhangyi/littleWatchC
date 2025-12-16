@@ -26,6 +26,7 @@ class BrushWorker(Thread):
         self.callbacks = callbacks or {}
         self.is_running = False
         self.stop_event = Event()
+        self.failed_courses = []  # 记录失败的课程
         
     def run(self):
         """执行刷课任务"""
@@ -42,13 +43,13 @@ class BrushWorker(Thread):
             self._emit('user_info', user_name)
         except Exception as e:
             self._emit('user_info', f"获取用户信息失败: {str(e)}")
-        
+        print(self.config)
         # 优先使用传入的课程配置，如果没有则从配置文件读取
-        if 'courses' in self.config:
-            courses = self.config['courses']
+        if 'COURSE_ID' in self.config:
+            courses = self.config['COURSE_ID']
             if not courses:
                 self._emit('log', "❌ 没有课程信息，程序终止")
-                self._emit('finished', False, 0, 0)
+                self._emit('finished', False, 0, 0, [])
                 return
         else:
             # 加载课程配置
@@ -57,13 +58,13 @@ class BrushWorker(Thread):
             
             if not course_config:
                 self._emit('log', "❌ 无法加载配置文件，程序终止")
-                self._emit('finished', False, 0, 0)
+                self._emit('finished', False, 0, 0, [])
                 return
                 
             courses = course_config.get('courses', [])
             if not courses:
                 self._emit('log', "❌ 配置文件中没有课程信息，程序终止")
-                self._emit('finished', False, 0, 0)
+                self._emit('finished', False, 0, 0, [])
                 return
             
         total_courses = len(courses)
@@ -106,10 +107,12 @@ class BrushWorker(Thread):
                 if not test_auth():
                     self._emit('log', "❌ 认证失败，请检查Token和Cookie是否过期")
                     total_failed += 1
+                    self.failed_courses.append(course)  # 记录失败课程
                     continue
             except Exception as e:
                 self._emit('log', f"❌ 认证测试出错: {str(e)}")
                 total_failed += 1
+                self.failed_courses.append(course)  # 记录失败课程
                 continue
                 
             self._emit('log', "✅ 认证通过")
@@ -121,10 +124,12 @@ class BrushWorker(Thread):
                 if not subsection_list:
                     self._emit('log', "❌ 无法获取课程详情，跳过此课程")
                     total_failed += 1
+                    self.failed_courses.append(course)  # 记录失败课程
                     continue
             except Exception as e:
                 self._emit('log', f"❌ 获取课程详情出错: {str(e)}")
                 total_failed += 1
+                self.failed_courses.append(course)  # 记录失败课程
                 continue
                 
             # 开始刷课
@@ -186,7 +191,7 @@ class BrushWorker(Thread):
         self._emit('log', f"❌ 失败课程: {total_failed}")
         
         self._emit('progress', 100)
-        self._emit('finished', True, total_courses, total_success)
+        self._emit('finished', True, total_courses, total_success, self.failed_courses)
         
     def stop(self):
         """停止刷课"""

@@ -2,16 +2,24 @@ import requests
 import json
 import time
 import random
+import os
 
-# 配置常量
-CONFIG = {
-    'X_TOKEN': '',
-    'COOKIE': ''
-    # 1983474287572594688
-    # 1983723370145034240
-}
-RANGE = slice(2,None)  
-SUBRANGE = slice(7,None)
+# 从 config.json 加载配置
+def load_config():
+    """从工作目录的 config.json 加载配置字典。"""
+    try:
+        base_dir = os.path.dirname(__file__)
+        cfg_path = os.path.join(base_dir, 'config.json')
+        with open(cfg_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"❌ 加载配置失败: {e}")
+        return {}
+
+# 全局配置（从 config.json 加载），运行时可以动态设置 `COURSE_ID`
+CONFIG = load_config()
+RANGE = slice(4, None)
+SUBRANGE = slice(3, None)
 def get_headers():
     """获取请求头"""
     return {

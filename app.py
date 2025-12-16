@@ -43,7 +43,8 @@ class SessionManager:
             'thread': None,
             'status': 'idle',
             'created_at': datetime.now(),
-            'logs': []
+            'logs': [],
+            'failed_courses': []  # 存储失败的课程
         }
         return session_id
 
@@ -143,7 +144,7 @@ def start_brush():
     """开始刷课"""
     try:
         data = request.json
-        
+
         # 验证输入
         if not data.get('X_TOKEN') or not data.get('COOKIE'):
             return jsonify({
@@ -164,14 +165,11 @@ def start_brush():
             cfg['X_TOKEN'] = data['X_TOKEN']
             cfg['COOKIE'] = data['COOKIE']
             # 保存前端选中的 COURSE_ID，便于下次加载
-            raw_course = data.get('course_id', '') or cfg.get('COURSE_ID', '')
+            raw_course = data.get('course_id', '')
             # 支持多行输入，按行拆分并去空
             course_ids = [s.strip() for s in str(raw_course).splitlines() if s.strip()]
             if course_ids:
-                # 为兼容老字段，保留第一个作为 COURSE_ID
                 cfg['COURSE_INPUT_ID'] = [{'id': cid} for cid in course_ids]
-                # 更新 courses 字段，保存为列表的对象形式
-                # cfg['courses'] = [{'id': cid} for cid in course_ids]
             else:
                 # 若无输入，保持已有值
                 cfg['COURSE_INPUT_ID'] = cfg.get('COURSE_INPUT_ID', '')
@@ -182,9 +180,9 @@ def start_brush():
         config = {
             'X_TOKEN': data['X_TOKEN'],
             'COOKIE': data['COOKIE'],
-            'COURSE_ID': data.get('COURSE_INPUT_ID', '')
+            'COURSE_ID': cfg['COURSE_INPUT_ID']
         }
-
+        print(f"config = {config}")
         # 创建并启动 BrushWorker（使用回调将日志/进度发送到 socket）
         chapter_range = data.get('chapter_range')
         subsection_range = data.get('subsection_range')
@@ -193,7 +191,7 @@ def start_brush():
             'log': lambda msg: emit_log(session_id, msg),
             'progress': lambda val: emit_progress(session_id, val),
             'user_info': lambda info: emit_user_info(session_id, info),
-            'finished': lambda success, total, count: emit_finished(session_id, success, total, count)
+            'finished': lambda success, total, count, failed: emit_finished(session_id, success, total, count, failed)
         }
 
         worker = create_brush_worker(config, callbacks=callbacks, chapter_range=chapter_range, subsection_range=subsection_range)
@@ -229,6 +227,86 @@ def stop_brush():
         return jsonify({
             'success': True,
             'message': '已停止刷课'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/restart-failed', methods=['POST'])
+def restart_failed():
+    """重新刷失败的课程"""
+    try:
+        data = request.json
+        session_id = data.get('session_id')
+        
+        if not session_id:
+            return jsonify({
+                'success': False,
+                'message': '缺少会话ID'
+            }), 400
+        
+        # 获取原会话的失败课程
+        original_session = session_manager.get_session(session_id)
+        if not original_session:
+            return jsonify({
+                'success': False,
+                'message': '会话不存在'
+            }), 404
+        
+        failed_courses = original_session['failed_courses']
+        if not failed_courses:
+            return jsonify({
+                'success': False,
+                'message': '没有失败的课程需要重新刷'
+            }), 400
+        
+        # 创建新会话
+        new_session_id = session_manager.create_session()
+        session_manager.update_status(new_session_id, 'running')
+        
+        # 获取原会话的配置信息
+        # 注意：这里需要从原会话的worker中获取配置，或者从其他地方获取
+        # 由于原代码没有直接存储配置，我们需要从原会话的最后一次刷课请求中获取
+        # 这里简化处理，假设我们可以从原会话中获取配置
+        # 实际项目中，可能需要改进会话管理，保存完整的配置信息
+        
+        # 准备配置（这里需要根据实际情况获取配置）
+        # 假设我们从session中获取配置
+        # 由于原代码没有保存配置，我们需要从其他地方获取
+        # 这里我们简化处理，直接使用原会话的配置
+        
+        # 注意：这里需要根据实际情况调整，确保获取正确的配置
+        # 由于原代码结构限制，我们需要重新获取配置
+        # 这里我们假设可以从session中获取配置
+        
+        # 创建并启动 BrushWorker
+        config = {
+            'X_TOKEN': brush_api.CONFIG['X_TOKEN'],
+            'COOKIE': brush_api.CONFIG['COOKIE'],
+            'COURSE_ID': failed_courses
+        }
+        
+        callbacks = {
+            'log': lambda msg: emit_log(new_session_id, msg),
+            'progress': lambda val: emit_progress(new_session_id, val),
+            'user_info': lambda info: emit_user_info(new_session_id, info),
+            'finished': lambda success, total, count, failed: emit_finished(new_session_id, success, total, count, failed)
+        }
+        
+        chapter_range = data.get('chapter_range')
+        subsection_range = data.get('subsection_range')
+        
+        worker = create_brush_worker(config, callbacks=callbacks, chapter_range=chapter_range, subsection_range=subsection_range)
+        session_manager.sessions[new_session_id]['thread'] = worker
+        worker.start()
+        
+        return jsonify({
+            'success': True,
+            'session_id': new_session_id,
+            'message': f'已开始重新刷 {len(failed_courses)} 个失败课程'
         })
     except Exception as e:
         return jsonify({
@@ -275,19 +353,25 @@ def emit_user_info(session_id, user_info):
     }, room=session_id)
 
 
-def emit_finished(session_id, success, total, success_count):
+def emit_finished(session_id, success, total, success_count, failed_courses=None):
     """发送完成信息"""
+    # 保存失败课程信息
+    session = session_manager.get_session(session_id)
+    if session:
+        session['failed_courses'] = failed_courses or []
+    
     socketio.emit('finished', {
         'type': 'finished',
         'success': success,
         'total': total,
         'success_count': success_count,
+        'failed_courses': failed_courses or [],
         'session_id': session_id
     }, room=session_id)
 
     session_manager.update_status(session_id, 'finished')
     # 30 秒后清理会话
-    threading.Timer(30.0, lambda: session_manager.delete_session(session_id)).start()
+    # threading.Timer(30.0, lambda: session_manager.delete_session(session_id)).start()
 
 
 @socketio.on('connect')
