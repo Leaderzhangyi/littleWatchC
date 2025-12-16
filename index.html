@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能刷课助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 24px;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            grid-column: 1 / -1;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f5f7fa;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .user-label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .user-value {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #f5f7fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .btn-secondary:hover {
+            background: #ebeef3;
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #ff5252;
+        }
+
+        .btn-danger:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .logs-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 500px; /* 确保容器有足够高度 */
+            overflow: hidden; /* 防止容器本身溢出 */
+        }
+
+        .logs-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        #logArea {
+            flex: 1;
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-y: scroll; /* 确保滚动条始终可见 */
+            max-height: 400px; /* 设置最大高度，超过后滚动 */
+            color: #333;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+
+        .log-success { color: #27ae60; }
+        .log-error { color: #e74c3c; }
+        .log-warning { color: #f39c12; }
+        .log-info { color: #3498db; }
+
+        .progress-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #eee;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .status-message {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .range-control {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .range-title {
+            grid-column: 1 / -1;
+            font-weight: 500;
+            color: #333;
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .config-path {
+            font-size: 12px;
+            color: #999;
+            padding: 8px 12px;
+            background: #f5f7fa;
+            border-radius: 4px;
+            word-break: break-all;
+            margin-top: 8px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 自定义滚动条样式 */
+        #logArea::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #logArea::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        #logArea::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        #logArea::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎓 智能刷课助手</h1>
+        <p>高效便捷的在线课程学习助手</p>
+    </div>
+
+    <div class="container">
+        <!-- 左侧: 配置和控制 -->
+        <div class="card">
+            <div class="user-info">
+                <span class="user-label">当前用户:</span>
+                <span class="user-value" id="userInfo">未登录</span>
+            </div>
+
+            <!-- 配置部分 -->
+            <div class="section-title">🔐 认证信息</div>
+            <div class="form-group">
+                <label>X_TOKEN</label>
+                <textarea id="tokenInput" placeholder="请输入 X_TOKEN..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Cookies</label>
+                <textarea id="cookieInput" placeholder="请输入 Cookies..."></textarea>
+            </div>
+
+            <div class="form-group" style="display:flex; gap:8px;">
+                <button class="btn-primary" style="flex:0 0 auto; padding:8px 12px;" onclick="login()">🔑 登录</button>
+                <div style="align-self:center;color:#666;font-size:13px;">（点击登录验证并显示用户信息）</div>
+            </div>
+
+            <!-- 课程部分 -->
+            <div class="section-title">📚 课程配置</div>
+            <div class="form-group">
+                <label>课程 ID</label>
+                <textarea id="courseIdInput" placeholder="请输入课程ID（多个用换行分隔）..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>配置文件路径</label>
+                <input type="text" id="configPathInput" value="config.json" placeholder="相对路径，例如 config.json" />
+            </div>
+
+            <button class="btn-secondary" onclick="loadConfig()" style="width: 100%;">📂 加载配置文件</button>
+
+            <!-- 范围设置 -->
+            <div class="section-title" style="margin-top: 24px;">📖 范围设置</div>
+            
+            <div class="form-group">
+                <span class="range-title">章节范围</span>
+                <div class="form-row">
+                    <div>
+                        <label>起始章节</label>
+                        <input type="number" id="chapterStart" value="3" min="1">
+                    </div>
+                    <div>
+                        <label>结束章节</label>
+                        <input type="number" id="chapterEnd" value="4" min="1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <span class="range-title">小节范围</span>
+                <div class="form-row">
+                    <div>
+                        <label>起始小节</label>
+                        <input type="number" id="subsectionStart" value="1" min="1">
+                    </div>
+                    <div>
+                        <label>结束小节</label>
+                        <input type="number" id="subsectionEnd" value="0" min="0" title="0 表示到末尾">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 控制按钮 -->
+            <div class="button-group">
+                <button class="btn-primary" id="startBtn" onclick="startBrush()">▶ 开始刷课</button>
+                <button class="btn-danger" id="stopBtn" onclick="stopBrush()" disabled style="display: none;">⏹ 停止刷课</button>
+            </div>
+        </div>
+
+        <!-- 右侧: 日志和进度 -->
+        <div class="card logs-container">
+            <div class="logs-title">📋 运行日志</div>
+            <div id="logArea"></div>
+
+            <div class="progress-section">
+                <div class="progress-label">
+                    <span>进度</span>
+                    <span id="progressText">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <div id="statusMessage" class="status-message" style="display: none; margin-top: 12px;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+
+        // 初始化
+        function init() {
+            loadConfig();
+        }
+
+        // 加载配置文件
+        async function loadConfig() {
+            try {
+                const cfgPath = document.getElementById('configPathInput').value || 'config.json';
+                const response = await fetch(`${API_BASE}/config?path=${encodeURIComponent(cfgPath)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('tokenInput').value = data.config.X_TOKEN || '';
+                    document.getElementById('cookieInput').value = data.config.COOKIE || '';
+                    
+                    let courseIds = '';
+                    if (data.config.courses && Array.isArray(data.config.courses)) {
+                        courseIds = data.config.courses.map(c => c.id).join('\n');
+                    }
+                    document.getElementById('courseIdInput').value = courseIds;
+
+                    // 加载范围设置
+                    const ranges = data.config.default_ranges || {};
+                    if (ranges.chapter_range) {
+                        document.getElementById('chapterStart').value = ranges.chapter_range.start || 1;
+                        document.getElementById('chapterEnd').value = ranges.chapter_range.end || 1;
+                    }
+                    if (ranges.subsection_range) {
+                        document.getElementById('subsectionStart').value = ranges.subsection_range.start || 1;
+                        document.getElementById('subsectionEnd').value = ranges.subsection_range.end || 0;
+                    }
+
+                    addLog('✅ 配置文件加载成功', 'success');
+                } else {
+                    addLog('❌ 加载配置文件失败', 'error');
+                }
+            } catch (error) {
+                addLog(`❌ 加载失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 开始刷课
+        async function startBrush() {
+            const token = document.getElementById('tokenInput').value.trim();
+            const cookie = document.getElementById('cookieInput').value.trim();
+            const courseId = document.getElementById('courseIdInput').value.trim();
+            console.log('Starting brush with', {token, cookie, courseId});
+            if (!token) {
+                showStatus('请输入 X_TOKEN', 'error');
+                return;
+            }
+            if (!cookie) {
+                showStatus('请输入 Cookies', 'error');
+                return;
+            }
+            if (!courseId) {
+                showStatus('请输入课程 ID', 'error');
+                return;
+            }
+
+            const chapterStart = parseInt(document.getElementById('chapterStart').value);
+            const chapterEnd = parseInt(document.getElementById('chapterEnd').value);
+            const subsectionStart = parseInt(document.getElementById('subsectionStart').value);
+            const subsectionEnd = parseInt(document.getElementById('subsectionEnd').value);
+
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+
+            startBtn.disabled = true;
+            stopBtn.style.display = 'block';
+            stopBtn.disabled = false;
+
+            clearLogs();
+            addLog('🚀 开始刷课...', 'info');
+
+            try {
+                const cfgPath = document.getElementById('configPathInput').value || 'config.json';
+                const response = await fetch(`${API_BASE}/start-brush`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        X_TOKEN: token,
+                        COOKIE: cookie,
+                        course_id: courseId,
+                        config_path: cfgPath,
+                        chapter_range: { start: chapterStart, end: chapterEnd },
+                        subsection_range: { start: subsectionStart, end: subsectionEnd }
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    // 建立 WebSocket 连接获取实时日志
+                    connectWebSocket(data.session_id);
+                } else {
+                    addLog(`❌ ${data.message}`, 'error');
+                    startBtn.disabled = false;
+                    stopBtn.style.display = 'none';
+                }
+            } catch (error) {
+                addLog(`❌ 请求失败: ${error.message}`, 'error');
+                startBtn.disabled = false;
+                stopBtn.style.display = 'none';
+            }
+        }
+
+        // 登录验证（调用后端 /api/login）
+        async function login() {
+            const token = document.getElementById('tokenInput').value.trim();
+            const cookie = document.getElementById('cookieInput').value.trim();
+
+            if (!token) { showStatus('请输入 X_TOKEN', 'error'); return; }
+            if (!cookie) { showStatus('请输入 Cookies', 'error'); return; }
+
+            addLog('🔑 正在登录验证...', 'info');
+            try {
+                const cfgPath = document.getElementById('configPathInput').value || 'config.json';
+                const resp = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ X_TOKEN: token, COOKIE: cookie, config_path: cfgPath })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    addLog('✅ 登录成功: ' + data.user_info, 'success');
+                    document.getElementById('userInfo').textContent = data.user_info;
+                    showStatus('登录成功', 'success');
+                } else {
+                    addLog('❌ 登录失败: ' + (data.message || '未知错误'), 'error');
+                    showStatus('登录失败', 'error');
+                }
+            } catch (err) {
+                addLog('❌ 登录请求失败: ' + err.message, 'error');
+                showStatus('登录请求失败', 'error');
+            }
+        }
+
+        // 停止刷课
+        async function stopBrush() {
+            try {
+                const response = await fetch(`${API_BASE}/stop-brush`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    addLog('⏹️ 已停止刷课', 'warning');
+                }
+            } catch (error) {
+                addLog(`❌ 停止失败: ${error.message}`, 'error');
+            }
+        }
+
+        // SocketIO 连接获取实时日志
+        function connectWebSocket(sessionId) {
+            // 首先尝试加载socket.io客户端库
+            if (typeof io === 'undefined') {
+                // 动态加载socket.io客户端库
+                const script = document.createElement('script');
+                script.src = 'https://cdn.socket.io/4.5.4/socket.io.min.js';
+                script.onload = () => {
+                    initSocketIO(sessionId);
+                };
+                document.head.appendChild(script);
+            } else {
+                initSocketIO(sessionId);
+            }
+        }
+        
+        function initSocketIO(sessionId) {
+            const socket = io('http://localhost:5000', {
+                query: {
+                    session_id: sessionId
+                }
+            });
+
+            socket.on('connect', () => {
+                addLog('📡 已连接到服务器', 'info');
+                // 加入会话房间
+                socket.emit('join_session', {session_id: sessionId});
+            });
+
+            socket.on('log', (data) => {
+                addLog(data.message, data.level || 'info');
+            });
+
+            socket.on('progress', (data) => {
+                updateProgress(data.value);
+            });
+
+            socket.on('user_info', (data) => {
+                document.getElementById('userInfo').textContent = data.user_info;
+            });
+
+            socket.on('finished', (data) => {
+                const startBtn = document.getElementById('startBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                startBtn.disabled = false;
+                stopBtn.style.display = 'none';
+                
+                if (data.success) {
+                    showStatus(`刷课完成! 成功: ${data.success_count}/${data.total}`, 'success');
+                } else {
+                    showStatus('刷课失败，请查看日志', 'error');
+                }
+                socket.disconnect();
+            });
+
+            socket.on('disconnect', () => {
+                addLog('📡 已断开连接', 'warning');
+            });
+
+            socket.on('connect_error', (error) => {
+                addLog(`❌ SocketIO 错误: ${error.message}`, 'error');
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').style.display = 'none';
+            });
+        }
+
+        // 添加日志
+        function addLog(message, level = 'info') {
+            const logArea = document.getElementById('logArea');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${level}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logArea.appendChild(entry);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        // 清空日志
+        function clearLogs() {
+            document.getElementById('logArea').innerHTML = '';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressText').textContent = '0%';
+        }
+
+        // 更新进度
+        function updateProgress(value) {
+            document.getElementById('progressFill').style.width = value + '%';
+            document.getElementById('progressText').textContent = value + '%';
+        }
+
+        // 显示状态信息
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message ${type}`;
+            statusEl.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => statusEl.style.display = 'none', 3000);
+            }
+        }
+
+        // 页面加载时初始化
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
