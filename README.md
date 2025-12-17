@@ -1,90 +1,306 @@
 # 智能刷课助手 - Web 版本
 
-现代化的网页前端，替代 Qt GUI，更美观易用。
+现代化的网页前端，替代 Qt GUI，提供更美观易用的课程自动学习解决方案。
+
+## 项目概述
+
+智能刷课助手是一个自动化学习辅助工具，专为在线教育平台设计，能够自动记录课程学习进度，帮助用户高效完成课程学习任务。采用现代化 Web 技术开发，提供直观的用户界面和实时的学习进度监控。
+
+## 功能特点
+
+### ✨ 现代化界面
+- 渐变色设计，视觉效果优雅
+- 响应式布局，适配各种屏幕尺寸
+- 实时日志显示，进度条动态更新
+- 多用户配置卡支持，便于管理多个学习账号
+
+### 🔐 安全便捷
+- 自动保存 Token 和 Cookie 到配置文件
+- 一键加载配置，快速切换学习环境
+- 支持多课程批量刷取，提高学习效率
+- 认证有效性实时验证
+
+### ⚡ 高效体验
+- 实时 WebSocket 通信，日志即时反馈
+- 后台线程执行，不阻塞用户界面
+- 智能失败重试机制
+- 学习进度精确到小节
+
+### 🔧 灵活配置
+- 章节范围自定义选择
+- 小节范围精确控制
+- 支持自定义配置文件路径
+- 可中断的学习过程
+
+## 技术架构
+
+### 前端架构
+- **技术栈**: HTML5 + CSS3 + Vanilla JavaScript
+- **界面设计**: 现代化响应式布局，支持多设备访问
+- **通信方式**: WebSocket 实时通信 + RESTful API
+- **用户体验**: 直观的配置界面，实时进度监控
+
+### 后端架构
+- **技术栈**: Flask + Flask-SocketIO + Python-SocketIO + Python-EngineIO
+- **核心组件**:
+  - `app.py`: 服务器入口，API 端点管理，SocketIO 通信
+  - `brush_api.py`: 刷课核心逻辑，API 调用，工作线程管理
+  - `core.py`: 备用核心实现，提供命令行支持
+- **数据管理**: JSON 配置文件存储用户认证信息和课程设置
+
+### 系统架构图
+```
+┌─────────────────┐     WebSocket     ┌─────────────────┐
+│   浏览器界面    │──────────────────▶│                 │
+└─────────────────┘                   │                 │
+                                      │    Flask 服务   │
+┌─────────────────┐     REST API      │    (app.py)     │
+│   用户配置      │──────────────────▶│                 │
+└─────────────────┘                   │                 │
+                                      │─────────────────┤
+                                      │                 │
+                                      │  刷课核心逻辑   │
+                                      │  (brush_api.py) │
+                                      │                 │
+                                      │─────────────────┤
+                                      │                 │
+                                      │  外部 API 调用  │
+                                      │  (requests)     │
+                                      │                 │
+┌─────────────────┐     JSON 文件     └─────────────────┘
+│   配置存储      │◀───────────────────┘
+└─────────────────┘
+```
 
 ## 快速开始
 
 ### 1. 安装依赖
 
+确保已安装 Python 3.8 或更高版本，然后执行以下命令安装依赖：
+
 ```bash
-pip install flask flask-cors flask-socketio python-socketio python-engineio
+pip install flask flask-cors flask-socketio python-socketio python-engineio requests
 ```
 
 ### 2. 运行服务器
+
+执行以下命令启动 Flask 服务器：
 
 ```bash
 python app.py
 ```
 
+服务器启动后，控制台将显示：
+```
+============================================================
+🚀 智能刷课助手 - Web 服务器
+============================================================
+📍 前端地址: http://localhost:5000
+🔗 API 地址: http://localhost:5000/api
+============================================================
+```
+
 ### 3. 打开浏览器
 
-访问 `http://localhost:5000`
+在浏览器中访问 `http://localhost:5000` 即可使用智能刷课助手的 Web 界面。
 
-## 功能特点
+## 使用说明
 
-✨ **现代化界面**
-- 渐变色设计，视觉效果优雅
-- 响应式布局，适配各种屏幕
-- 实时日志显示，进度条更新
+### 1. 用户配置管理
 
-🔐 **安全便捷**
-- 自动保存 Token 和 Cookie 到配置文件
-- 一键加载配置
-- 支持多课程批量刷取
+- **添加配置卡**: 点击"➕ 添加用户配置"按钮创建新的用户配置
+- **删除配置卡**: 点击配置卡右上角的"🗑️ 删除"按钮移除配置
+- **多配置支持**: 可同时添加多个用户配置，分别管理不同的学习账号
 
-⚡ **高效体验**
-- 实时 WebSocket 通信
-- 即时日志反馈
-- 后台线程执行，不阻塞界面
+### 2. 认证信息配置
 
-## 文件说明
+1. **X_TOKEN**: 输入课程平台的认证令牌
+2. **Cookies**: 输入浏览器中的 Cookie 信息
+3. **点击登录**: 验证认证信息的有效性
+4. **用户信息**: 验证成功后将显示当前登录用户的名称
 
-- `index.html` - 前端页面（HTML/CSS/JavaScript）
-- `app.py` - Flask 后端服务器
-- `course_gui.py` - 刷课核心逻辑（复用原有代码）
-- `config.json` - 配置文件（自动保存）
+### 3. 课程配置
 
-## 使用流程
+- **课程 ID**: 输入要学习的课程 ID，支持多行输入多个课程 ID
+- **配置文件路径**: 指定配置文件的保存路径（默认为 `config.json`）
+- **加载配置**: 点击"📂 加载配置文件"按钮加载已保存的配置
 
-1. **加载配置** 
-   - 点击 "📂 加载配置文件" 加载已保存的配置
+### 4. 范围设置
 
-2. **输入认证信息**
-   - 粘贴 X_TOKEN
-   - 粘贴 Cookies
+- **章节范围**: 设置要学习的章节起始和结束位置
+- **小节范围**: 设置要学习的小节起始和结束位置（0 表示到末尾）
 
-3. **设置范围**
-   - 配置章节范围
-   - 配置小节范围
+### 5. 开始学习
 
-4. **开始刷课**
-   - 点击 "▶ 开始刷课" 开始任务
-   - 实时查看日志和进度
-   - 可随时点击 "⏹ 停止刷课" 中止
+1. 确认所有配置信息正确无误
+2. 点击"▶ 开始刷课"按钮启动学习任务
+3. 实时查看学习日志和进度
+4. 可随时点击"⏹ 停止"按钮中断学习
 
-## 技术栈
+### 6. 失败课程重试
 
-- **前端**: HTML5 + CSS3 + Vanilla JavaScript
-- **后端**: Flask + Flask-SocketIO
-- **通信**: REST API + WebSocket
-- **Python**: 3.8+
+- 学习完成后，若有失败的课程，"🔄 重新刷失败"按钮将变为可用
+- 点击该按钮可重新学习失败的课程
+
+## API 文档
+
+### 获取配置
+```
+GET /api/config?path=config.json
+```
+
+**参数**:
+- `path`: 配置文件路径（可选，默认: config.json）
+
+**响应**:
+```json
+{
+  "success": true,
+  "config": {
+    "X_TOKEN": "your_token",
+    "COOKIE": "your_cookie",
+    "COURSE_ID": "course_id"
+  }
+}
+```
+
+### 登录验证
+```
+POST /api/login
+```
+
+**请求体**:
+```json
+{
+  "X_TOKEN": "your_token",
+  "COOKIE": "your_cookie",
+  "config_path": "config.json"
+}
+```
+
+**响应**:
+```json
+{
+  "success": true,
+  "user_info": "用户名"
+}
+```
+
+### 开始刷课
+```
+POST /api/start-brush
+```
+
+**请求体**:
+```json
+{
+  "X_TOKEN": "your_token",
+  "COOKIE": "your_cookie",
+  "course_id": "course_id",
+  "config_path": "config.json",
+  "chapter_range": { "start": 1, "end": 5 },
+  "subsection_range": { "start": 1, "end": 0 }
+}
+```
+
+**响应**:
+```json
+{
+  "success": true,
+  "session_id": "session_uuid",
+  "message": "已启动刷课任务"
+}
+```
+
+### 停止刷课
+```
+POST /api/stop-brush
+```
+
+**响应**:
+```json
+{
+  "success": true,
+  "message": "已停止刷课"
+}
+```
+
+### 重新刷失败课程
+```
+POST /api/restart-failed
+```
+
+**请求体**:
+```json
+{
+  "session_id": "original_session_id"
+}
+```
+
+**响应**:
+```json
+{
+  "success": true,
+  "session_id": "new_session_uuid",
+  "message": "已开始重新刷失败课程"
+}
+```
+
+## 配置文件格式
+
+配置文件采用 JSON 格式，示例如下：
+
+```json
+{
+  "X_TOKEN": "your_token_here",
+  "COOKIE": "your_cookie_here",
+  "COURSE_INPUT_ID": [
+    { "id": "course_id_1" },
+    { "id": "course_id_2" }
+  ]
+}
+```
 
 ## 故障排除
 
-**无法连接服务器**
-- 检查 Flask 服务是否运行
-- 确认端口 5000 未被占用
-- 检查防火墙设置
+### 无法连接服务器
+- 检查 Flask 服务是否正在运行
+- 确认端口 5000 未被其他程序占用
+- 检查防火墙设置，确保端口开放
+- 验证浏览器 URL 是否正确（应为 `http://localhost:5000`）
 
-**日志未显示**
+### 日志未显示
 - 检查浏览器控制台是否有 JavaScript 错误
-- 确认 WebSocket 连接是否成功
+- 确认 WebSocket 连接是否成功建立
+- 验证服务器是否正常响应 API 请求
 
-**配置无法保存**
-- 检查 `config.json` 文件权限
-- 确保目录可写
+### 配置无法保存
+- 检查配置文件路径是否正确
+- 确认当前用户对配置文件目录有写入权限
+- 检查磁盘空间是否充足
 
-## 对比 Qt 版本优势
+### 认证失败
+- 验证 X_TOKEN 和 Cookie 是否正确
+- 确认令牌是否过期，尝试重新获取
+- 检查网络连接是否正常
+
+### 课程学习失败
+- 确认课程 ID 是否正确
+- 检查认证信息是否有效
+- 尝试减小章节/小节范围，分批学习
+- 使用"重新刷失败"功能重试
+
+## 命令行使用（备用）
+
+如果 Web 界面无法使用，可直接使用命令行方式运行：
+
+```bash
+python core.py
+```
+
+**注意**: 命令行方式需要手动修改 `core.py` 文件中的配置信息。
+
+## 与 Qt 版本对比
 
 | 功能 | Qt 版本 | Web 版本 |
 |------|--------|---------|
@@ -93,7 +309,76 @@ python app.py
 | 响应速度 | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
 | 开发效率 | ⭐⭐⭐ | ⭐⭐⭐⭐ |
 | 部署难度 | 中等 | 非常简单 |
+| 多用户支持 | 有限 | 完整支持 |
+| 实时监控 | 基本支持 | 完善支持 |
+
+## 贡献指南
+
+欢迎对项目进行贡献！请遵循以下指南：
+
+1. **Fork 仓库**: 在 GitHub 上 Fork 本项目到您的账号
+2. **创建分支**: 基于 master 分支创建功能分支
+3. **提交更改**: 确保代码符合项目风格规范
+4. **测试验证**: 运行测试确保功能正常
+5. **提交 PR**: 提交 Pull Request 到主仓库
+
+### 开发环境设置
+
+```bash
+# 克隆仓库
+git clone https://github.com/yourusername/course-brush.git
+cd course-brush
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 运行开发服务器
+python app.py
+```
+
+### 代码风格规范
+- Python 代码遵循 PEP 8 规范
+- JavaScript 代码使用一致的缩进和命名规范
+- 提交信息使用清晰的描述
 
 ## 许可证
 
-MIT
+本项目采用 MIT 许可证。
+
+```
+MIT License
+
+Copyright (c) 2025 智能刷课助手
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+## 更新日志
+
+### v1.0.0 (2025-12-17)
+- 初始版本发布
+- Web 界面替代 Qt GUI
+- 支持多用户配置
+- 实时 WebSocket 通信
+- 章节和小节范围选择
+- 失败课程重试机制
+
+
+
+**智能刷课助手** - 让在线学习更高效！ 🎓
