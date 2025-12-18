@@ -14,6 +14,11 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 import logging
 import brush_api
 from brush_api import create_brush_worker, load_config_from_json, save_config_to_json, BrushWorker
+# 导入AI Agent
+from ai_agent import AIAssistant
+
+# 初始化AI助手
+ai_assistant = AIAssistant()
 
 
 # 配置日志
@@ -229,6 +234,34 @@ def stop_brush():
             'message': '已停止刷课'
         })
     except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/ai-assistant', methods=['POST'])
+def ai_assistant_api():
+    """AI助手API，用于处理用户自然语言指令"""
+    try:
+        data = request.json or {}
+        query = data.get('query', '')
+        
+        if not query:
+            return jsonify({
+                'success': False,
+                'message': '请输入查询内容'
+            }), 400
+        
+        # 处理用户查询
+        result = ai_assistant.handle_query(query)
+        
+        return jsonify({
+            'success': True,
+            'response': result
+        })
+    except Exception as e:
+        logging.error(f"AI助手处理错误: {str(e)}")
         return jsonify({
             'success': False,
             'message': str(e)

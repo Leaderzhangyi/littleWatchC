@@ -14,6 +14,12 @@
 - 实时日志显示，进度条动态更新
 - 多用户配置卡支持，便于管理多个学习账号
 
+### 🤖 AI助手功能
+- **自然语言指令**: 支持用户通过自然语言输入刷课指令
+- **智能信息提取**: 自动从指令中提取cookies、token、课程ID和章节小节信息
+- **AI聊天界面**: 实时对话交互，支持上下文理解
+- **智能问答**: 自动询问缺失信息，提供友好提示
+
 ### 🔐 安全便捷
 - 自动保存 Token 和 Cookie 到配置文件
 - 一键加载配置，快速切换学习环境
@@ -41,12 +47,18 @@
 - **用户体验**: 直观的配置界面，实时进度监控
 
 ### 后端架构
-- **技术栈**: Flask + Flask-SocketIO + Python-SocketIO + Python-EngineIO
+- **技术栈**: Flask + Flask-SocketIO + Python-SocketIO + Python-EngineIO + LangChain + LangChain-OpenAI
 - **核心组件**:
   - `app.py`: 服务器入口，API 端点管理，SocketIO 通信
   - `brush_api.py`: 刷课核心逻辑，API 调用，工作线程管理
+  - `ai_agent.py`: AI助手核心模块，自然语言指令解析，智能刷课任务生成
   - `core.py`: 备用核心实现，提供命令行支持
 - **数据管理**: JSON 配置文件存储用户认证信息和课程设置
+- **AI组件**:
+  - **LangChain**: 构建AI Agent的框架
+  - **OpenAI API**: 提供大语言模型支持
+  - **自然语言处理**: 解析用户指令，提取关键信息
+  - **工具调用**: 调用刷课API执行任务
 
 ### 系统架构图
 ```
@@ -57,6 +69,16 @@
 ┌─────────────────┐     REST API      │    (app.py)     │
 │   用户配置      │──────────────────▶│                 │
 └─────────────────┘                   │                 │
+                                      │─────────────────┤
+                                      │    AI 助手模块  │
+                                      │   (ai_agent.py) │
+                                      │    ┌───────────┐│
+                                      │    │ LangChain ││
+                                      │    └───────────┘│
+                                      │        │        │
+                                      │    ┌───────────┐│
+                                      │    │ OpenAI API││
+                                      │    └───────────┘│
                                       │─────────────────┤
                                       │                 │
                                       │  刷课核心逻辑   │
@@ -79,10 +101,35 @@
 确保已安装 Python 3.8 或更高版本，然后执行以下命令安装依赖：
 
 ```bash
-pip install flask flask-cors flask-socketio python-socketio python-engineio requests
+pip install -r requirements.txt
 ```
 
-### 2. 运行服务器
+**requirements.txt 包含的依赖库**：
+```
+fastapi==0.110.0
+uvicorn==0.29.0
+langchain==0.1.15
+langchain-openai==0.1.0
+requests==2.31.0
+beautifulsoup4==4.12.3
+python-dotenv==1.0.1
+flask==3.0.3
+flask-cors==4.0.1
+flask-socketio==5.3.6
+python-socketio==5.11.2
+python-engineio==4.8.2
+uuid==1.30
+```
+
+### 2. 配置AI模型API Key
+
+在项目根目录创建 `.env` 文件，添加您的 OpenAI API Key：
+
+```
+OPENAI_API_KEY=your_openai_api_key
+```
+
+### 3. 运行服务器
 
 执行以下命令启动 Flask 服务器：
 
@@ -100,7 +147,7 @@ python app.py
 ============================================================
 ```
 
-### 3. 打开浏览器
+### 4. 打开浏览器
 
 在浏览器中访问 `http://localhost:5000` 即可使用智能刷课助手的 Web 界面。
 
@@ -141,6 +188,34 @@ python app.py
 
 - 学习完成后，若有失败的课程，"🔄 重新刷失败"按钮将变为可用
 - 点击该按钮可重新学习失败的课程
+
+### 7. AI助手使用
+
+#### 7.1 AI助手界面
+- 页面中间新增了AI助手聊天区域
+- 底部文本框用于输入自然语言指令
+- 右侧显示聊天历史记录
+
+#### 7.2 自然语言指令示例
+
+##### 7.2.1 完整指令
+```
+使用cookies 'your_cookies_here'和token 'your_token_here'学习课程123456的第3章第5小节
+```
+
+##### 7.2.2 部分指令（AI会询问缺失信息）
+```
+学习课程123456的第3章第5小节
+```
+
+##### 7.2.3 多章节小节
+```
+使用cookies 'your_cookies_here'和token 'your_token_here'学习课程123456的第2-5章第1-3小节
+```
+
+#### 7.3 响应示例
+- 成功响应：`已开始刷课任务，课程ID: 123456，章节范围: {"start": 3, "end": 3}，小节范围: {"start": 5, "end": 5}`
+- 失败响应：`请提供以下信息：cookies, token`
 
 ## API 文档
 
@@ -246,6 +321,26 @@ POST /api/restart-failed
 }
 ```
 
+### AI助手API
+```
+POST /api/ai-assistant
+```
+
+**请求体**:
+```json
+{
+  "query": "使用cookies 'xxx'和token 'yyy'学习课程123的第3章第5小节"
+}
+```
+
+**响应**:
+```json
+{
+  "success": true,
+  "response": "已开始刷课任务，课程ID: 123，章节范围: {\"start\": 3, \"end\": 3}，小节范围: {\"start\": 5, \"end\": 5}"
+}
+```
+
 ## 配置文件格式
 
 配置文件采用 JSON 格式，示例如下：
@@ -289,6 +384,13 @@ POST /api/restart-failed
 - 检查认证信息是否有效
 - 尝试减小章节/小节范围，分批学习
 - 使用"重新刷失败"功能重试
+
+### AI助手相关问题
+- **API Key无效**: 检查`.env`文件中的OpenAI API Key是否正确
+- **网络问题**: 检查网络连接，确保能访问OpenAI API
+- **指令解析失败**: 优化指令格式，确保包含所有必要信息
+- **模型调用失败**: 查看服务器日志，检查AI模型调用是否有错误
+- **API调用频率限制**: 减少调用频率，或升级OpenAI API套餐
 
 ## 命令行使用（备用）
 
@@ -370,6 +472,20 @@ SOFTWARE.
 ```
 
 ## 更新日志
+
+### v1.1.0 (2025-12-19)
+- **新增AI助手功能**
+  - 支持用户通过自然语言输入刷课指令
+  - 添加AI聊天界面，支持实时对话
+  - 集成LangChain框架，构建AI Agent
+  - 支持从自然语言指令中提取关键信息
+  - 自动生成刷课任务并执行
+- **技术更新**
+  - 添加`ai_agent.py`核心模块
+  - 集成OpenAI API支持
+  - 新增`.env`配置文件
+  - 更新`requirements.txt`依赖库
+  - 添加AI助手API端点
 
 ### v1.0.0 (2025-12-17)
 - 初始版本发布

@@ -356,6 +356,20 @@
             <div id="userConfigsContainer"></div>
         </div>
 
+        <!-- 中间: AI助手聊天 -->
+        <div class="card">
+            <div class="section-title">🤖 AI助手</div>
+            
+            <!-- AI聊天区域 -->
+            <div id="aiChatArea" style="height: 300px; overflow-y: scroll; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; margin-bottom: 16px;"></div>
+            
+            <!-- 输入区域 -->
+            <div style="display: flex; gap: 8px;">
+                <textarea id="aiInput" placeholder="请输入您的刷课指令，例如：'使用cookies xxx和token yyy学习课程123的第3章第5小节'" style="flex: 1; resize: vertical; min-height: 60px;"></textarea>
+                <button class="btn-primary" onclick="sendAIQuery()" style="flex-shrink: 0; align-self: flex-end; padding: 0 16px;">发送</button>
+            </div>
+        </div>
+
         <!-- 右侧: 日志和进度 -->
         <div class="card logs-container">
             <div class="logs-title">📋 运行日志</div>
@@ -650,6 +664,68 @@
             } catch (error) {
                 addLog(`❌ 停止失败: ${error.message}`, 'error');
             }
+        }
+        
+        // 发送AI查询
+        async function sendAIQuery() {
+            const aiInput = document.getElementById('aiInput');
+            const query = aiInput.value.trim();
+            
+            if (!query) {
+                showStatus('请输入查询内容', 'error');
+                return;
+            }
+            
+            // 添加用户消息到聊天区域
+            addAIMessage(query, 'user');
+            aiInput.value = '';
+            
+            try {
+                const response = await fetch(`${API_BASE}/ai-assistant`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // 添加AI回复到聊天区域
+                    addAIMessage(data.response, 'assistant');
+                    addLog(`🤖 AI助手: ${data.response}`, 'info');
+                } else {
+                    addAIMessage(`❌ AI助手错误: ${data.message}`, 'assistant');
+                    addLog(`❌ AI助手错误: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                addAIMessage(`❌ 请求失败: ${error.message}`, 'assistant');
+                addLog(`❌ AI助手请求失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 添加AI消息到聊天区域
+        function addAIMessage(message, sender) {
+            const aiChatArea = document.getElementById('aiChatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.style.marginBottom = '8px';
+            messageDiv.style.padding = '8px 12px';
+            messageDiv.style.borderRadius = '8px';
+            
+            if (sender === 'user') {
+                messageDiv.style.backgroundColor = '#667eea';
+                messageDiv.style.color = 'white';
+                messageDiv.style.alignSelf = 'flex-end';
+                messageDiv.style.textAlign = 'right';
+                messageDiv.innerHTML = `<strong>我:</strong> ${message}`;
+            } else {
+                messageDiv.style.backgroundColor = '#f0f0f0';
+                messageDiv.style.color = '#333';
+                messageDiv.style.alignSelf = 'flex-start';
+                messageDiv.innerHTML = `<strong>AI助手:</strong> ${message}`;
+            }
+            
+            aiChatArea.appendChild(messageDiv);
+            aiChatArea.scrollTop = aiChatArea.scrollHeight;
         }
         
         // 重新刷失败课程
